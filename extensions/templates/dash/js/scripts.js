@@ -39,7 +39,7 @@ $(function(){
 				$('a.icon_search').click(function(e) {
 					//smoothen toggle, possibly add animate function
 					$('span.lp_search').slideToggle('fast');
-					e.preventDefault;
+					e.preventDefault();
 				});
 				
 });
