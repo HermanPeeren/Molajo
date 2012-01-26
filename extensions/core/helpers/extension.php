@@ -52,21 +52,22 @@ abstract class MolajoExtensionHelper
         $now = $date->toMySQL();
         $nullDate = $db->getNullDate();
         $acl = new MolajoACL ();
+        if ($asset_type_id == MOLAJO_ASSET_TYPE_EXTENSION_POSITION) {
+            $queryAssetTypeID = MOLAJO_ASSET_TYPE_EXTENSION_MODULE;
+        } else {
+            $queryAssetTypeID = $asset_type_id;
+        }
 
         /**
          *  Extensions Table
          */
         $query->select('a.' . $db->namequote('id') . ' as extension_id');
         $query->select('a.' . $db->namequote('name') . ' as extension_name');
-        $query->select('a.' . $db->namequote('subtype') );
+        $query->select('a.' . $db->namequote('subtype'));
 
         $query->from($db->namequote('#__extensions') . ' as a');
+        $query->where('a.' . $db->namequote('asset_type_id') . ' = ' . (int)$queryAssetTypeID);
 
-        if ($asset_type_id == MOLAJO_ASSET_TYPE_EXTENSION_POSITION) {
-            $query->where('a.' . $db->namequote('asset_type_id') . ' = ' . (int)$asset_type_id - 1);
-        } else {
-            $query->where('a.' . $db->namequote('asset_type_id') . ' = ' . (int)$asset_type_id);
-        }
         /** plugins and views have subtypes */
         if ($extension_type == null) {
         } else {
@@ -92,20 +93,16 @@ abstract class MolajoExtensionHelper
 
         $query->from($db->namequote('#__extension_instances') . ' as b');
 
-        if ($extension == null) {
+        $query->where('a.' . $db->namequote('id') . ' = b.' . $db->namequote('extension_id'));
+        $query->where('b.' . $db->namequote('asset_type_id') . ' = ' . (int)$queryAssetTypeID);
+
+        if ($asset_type_id == MOLAJO_ASSET_TYPE_EXTENSION_POSITION) {
+            $query->where('b.' . $db->namequote('position') . ' = ' . $db->quote($extension));
+            $query->order('b.' . $db->namequote('ordering'));
+        } else if ($extension == null) {
         } else {
             $query->where('(b.' . $db->namequote('title') . ' = ' . $db->quote($extension) .
                 ' OR ' . 'b.' . $db->namequote('id') . ' = ' . (int)$extension . ')');
-        }
-
-        $query->where('a.' . $db->namequote('id') . ' = b.' . $db->namequote('extension_id'));
-
-        if ($asset_type_id == MOLAJO_ASSET_TYPE_EXTENSION_POSITION) {
-            $query->where('b.' . $db->namequote('asset_type_id') . ' = ' . (int)$asset_type_id - 1);
-            $query->where('b.' . $db->namequote('position') . ' = ' . $db->quote($extension));
-            $query->order('b.' . $db->namequote('ordering'));
-        } else {
-            $query->where('b.' . $db->namequote('asset_type_id') . ' = ' . (int)$asset_type_id);
         }
 
         $query->where('b.' . $db->namequote('status') . ' = ' . MOLAJO_STATUS_PUBLISHED);
@@ -182,16 +179,64 @@ abstract class MolajoExtensionHelper
         $query->where('e.' . $db->namequote('site_id') . ' = ' . MOLAJO_SITE_ID);
 
         $db->setQuery($query->__toString());
-
+/**
+if ($asset_type_id == MOLAJO_ASSET_TYPE_EXTENSION_POSITION) {
+    if ($extension == 'footer') {
+        echo $query->__toString();
+    }
+}
+*/
         $extensions = $db->loadObjectList();
 
         if ($error = $db->getErrorMsg()) {
             MolajoError::raiseWarning(500, $error);
             return false;
         }
-        //echo '<pre>';var_dump($extensions);'</pre>';
 
         return $extensions;
+    }
+
+    /**
+     * getInstanceID
+     *
+     * Retrieves Extension ID, given title
+     *
+     * @static
+     * @param   $title
+     *
+     * @return  bool|mixed
+     * @since   1.0
+     */
+    public static function getInstanceID($title)
+    {
+        $db = MolajoController::getDbo();
+        $query = $db->getQuery(true);
+        $date = MolajoController::getDate();
+        $now = $date->toMySQL();
+        $nullDate = $db->getNullDate();
+        $acl = new MolajoACL ();
+
+        $query->select('a.' . $db->namequote('id'));
+        $query->from($db->namequote('#__extension_instances') . ' as a');
+        $query->where('a.' . $db->namequote('title') . ' = ' . $db->quote('title'));
+
+        $query->where('a.' . $db->namequote('status') . ' = ' . MOLAJO_STATUS_PUBLISHED);
+        $query->where('(a.start_publishing_datetime = ' . $db->Quote($nullDate) . ' OR a.start_publishing_datetime <= ' . $db->Quote($now) . ')');
+        $query->where('(a.stop_publishing_datetime = ' . $db->Quote($nullDate) . ' OR a.stop_publishing_datetime >= ' . $db->Quote($now) . ')');
+
+        /** assets */
+        $query->from($db->namequote('#__assets') . ' as b_assets');
+        $acl->getQueryInformation('', $query, 'viewaccess', array('table_prefix' => 'b_assets'));
+
+        $db->setQuery($query->__toString());
+        $id = $db->loadResult();
+
+        if ($error = $db->getErrorMsg()) {
+            MolajoError::raiseWarning(500, $error);
+            return false;
+        }
+
+        return $id;
     }
 
     /**
@@ -238,6 +283,8 @@ abstract class MolajoExtensionHelper
     }
 
     /**
+     * NOT USED
+     *
      * getOptions
      *
      * Construct the Request Array for the MVC
@@ -252,7 +299,7 @@ abstract class MolajoExtensionHelper
         $request->set('component_table', '');
 
         /** Configuration model */
-        $configModel = new MolajoModelConfiguration ($request->get('option'));
+        $configModel = new MolajoModelConfiguration ($request->get('extension_instance_name'));
 
         /** Task */
         if ($request->get('task', '') == '') {
@@ -323,17 +370,17 @@ abstract class MolajoExtensionHelper
         $model = '';
         if ($request->get('controller') == 'display') {
             if ($request->get('static') === true) {
-                $model = 'dummy';
+                $model = 'static';
             } else {
                 $model = 'display';
             }
         } else {
             $model = 'edit';
         }
-        if ($model == 'dummy') {
+        if ($model == 'static') {
             $request->set('model', 'MolajoModel');
         } else {
-            $request->set('model', ucfirst($request->get('option')) . 'Model' . ucfirst($model));
+            $request->set('model', ucfirst($request->get('extension_instance_name')) . 'Model' . ucfirst($model));
         }
 
         if ($request->get('controller') == 'display') {

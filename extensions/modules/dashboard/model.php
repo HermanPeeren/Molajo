@@ -1,19 +1,19 @@
 <?php
 /**
  * @package     Molajo
- * @subpackage  Controller
+ * @subpackage  Dashboard
  * @copyright   Copyright (C) 2012 Amy Stephen. All rights reserved.
  * @license     GNU General Public License Version 2, or later http://www.gnu.org/licenses/gpl.html
  */
 defined('MOLAJO') or die;
 
 /**
- * Display Controller
+ * Dashboard
  *
- * @package      Molajo
- * @subpackage   Controller
- * @since        1.0
+ * @package     Molajo
+ * @subpackage  Model
+ * @since       1.0
  */
-class FooterModuleControllerDisplay extends MolajoControllerDisplay
+class DashboardModuleModelDisplay extends MolajoModel
 {
 }

@@ -14,7 +14,7 @@ defined('MOLAJO') or die;
  * @subpackage  Model
  * @since       1.0
  */
-class FooterModelModule extends MolajoModel
+class FooterModuleModelDisplay extends MolajoModel
 {
     /**
      * __construct
@@ -40,7 +40,8 @@ class FooterModelModule extends MolajoModel
     public function getItems()
     {
         $this->items = array();
-
+echo 'in getItems';
+        die;
         $tempObject = new JObject();
 
         /** footer line 1 */
@@ -59,16 +60,16 @@ class FooterModelModule extends MolajoModel
         $linked_text = $this->parameters->def('linked_text', 'Molajo&#153;');
         $remaining_text = $this->parameters->def('remaining_text', ' is free software.');
         $version = $this->parameters->def('version', MolajoTextHelper::_(MOLAJOVERSION));
-        
+
         $tempObject->set('link', $link);
         $tempObject->set('linked_text', $linked_text);
         $tempObject->set('remaining_text', $remaining_text);
         $tempObject->set('version', $version);
-        
+
         $line2 = '<a href="' . $link . '">' . $linked_text . ' v.' . $version . '</a>';
         $line2 .= $remaining_text;
         $tempObject->set('line2', $line2);
-        
+
         /** save recordset */
         $this->items[] = $tempObject;
 

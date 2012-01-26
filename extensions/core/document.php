@@ -30,7 +30,7 @@ class MolajoDocument
      * @var object
      * @since 1.0
      */
-    protected $request = null;
+    public $request = null;
 
     /**
      * Template Parameters
@@ -69,7 +69,11 @@ class MolajoDocument
     public function __construct($request = array())
     {
         $this->request = $request;
-
+/**
+echo '<pre>';
+var_dump($this->request);
+echo '</pre>';
+**/
         $formatXML = MOLAJO_EXTENSIONS_CORE . '/core/renderers/sequence.xml';
         if (JFile::exists($formatXML)) {
         } else {
@@ -99,26 +103,15 @@ class MolajoDocument
             'parameters' => $this->request->get('template_parameters')
         );
 
-        //        $this->parameters = array();
-        //        $this->parameters = $this->request->get;
-        //        $this->parameters = json_encode($this->request->get);
-        //echo 'Parameters'.'<pre>';var_dump(json_encode($this->parameters));echo '</pre>';
-        // die;
-        //      die;
         /** Template Parameters */
         $this->parameters = new JRegistry;
         $this->parameters->loadArray($parameters);
 
         /** Before Event */
-        //        MolajoController::getApplication()->triggerEvent('onBeforeRender');
-
-        /** Load Media */
-//        MolajoTemplateHelper::loadFavicon();
-//        MolajoTemplateHelper::loadLanguage();
-//        $this->_loadMedia();
+        // MolajoController::getApplication()->triggerEvent('onBeforeRender');
 
         /** process template include, and then all rendered output, for <include statements */
-        $body = $this->_renderLoop($this->request->get('template_include'));
+        $body = $this->_renderLoop();
 
         /** set response body */
         MolajoController::getApplication()->setBody($body);
@@ -132,11 +125,11 @@ class MolajoDocument
     /**
      *  _renderLoop
      *
-     * Extension Views can contain <include:xyz statements in the same manner that the
-     *  template include files use these statements. For that reason, this method parses
-     *  thru the initial template include, renders the output for the <include:xyz statements
-     *  found, and then parses that output, over and over, until no more <include:xyz statements
-     *  are located.
+     * Template Views can contain <include:renderer statements in the same manner that the
+     *  Theme include files use these statements. For that reason, this method parses
+     *  the initial template include, renders the output for the <include:renderer statements
+     *  found, and then parses that output again, over and over, until no more <include:renderer
+     *  statements are found. Potential endless loop stopped by MOLAJO_STOP_LOOP value.
      *
      * @return string  Rendered output for the Response Head and Body
      * @since  1.0
@@ -145,7 +138,7 @@ class MolajoDocument
     {
         /** include the template and page */
         ob_start();
-        require $this->request->get('template_include');
+        require $this->request->get('template_path');
         $this->_template = ob_get_contents();
         ob_end_clean();
 
@@ -167,6 +160,7 @@ class MolajoDocument
                 /** invoke renderers for new include statements */
                 $this->_template = $this->_renderTemplate();
             }
+
             if ($loop > MOLAJO_STOP_LOOP) {
                 break;
             }
@@ -276,9 +270,9 @@ class MolajoDocument
                     $replace[] = "<include:" . $rendererArray['replace'] . "/>";
 
                     /** 7. load the renderer class and send in requestArray */
-                    $class = 'Molajo' . ucfirst($rendererName) . 'Renderer';
+                    $class = 'Molajo' . 'Renderer'.ucfirst($rendererName);
                     if (class_exists($class)) {
-                        $rendererClass = new $class ($rendererName, $this->request);
+                        $rendererClass = new $class ($rendererName, $this->request, $includeName);
                     } else {
                         echo 'failed renderer = ' . $class . '<br />';
                         // ERROR

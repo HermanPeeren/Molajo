@@ -47,11 +47,10 @@ if (isset($_SERVER['SERVER_PORT'])) {
         $siteBase .= ":" . $_SERVER['SERVER_PORT'];
     }
 }
-if ($_SERVER['PHP_SELF'] == '/index.php') {
-    $folder = '/';
+if (strripos($_SERVER['PHP_SELF'], '/index.php')) {
+    $folder = substr($_SERVER['PHP_SELF'], 0, strripos($_SERVER['PHP_SELF'], '/index.php')).'/';
 } else {
-    $folder = substr($_SERVER['PHP_SELF'], 1, strlen($_SERVER['PHP_SELF']));
-    $folder = '/'.substr($folder, 0, strpos($folder, '/')).'/';
+    $folder = '/';
 }
 $siteBase .= $folder;
 
@@ -149,7 +148,14 @@ if (defined('MOLAJO_APPLICATION')) {
         $pageRequest = $requestURI;
     }
 }
-define('MOLAJO_PAGE_REQUEST', $pageRequest);
+
+if (defined('MOLAJO_PAGE_REQUEST')) {
+} else {
+    if (strripos($pageRequest, '/')) {
+        $pageRequest = substr($pageRequest, 0, strripos($pageRequest, '/'));
+    }
+    define('MOLAJO_PAGE_REQUEST', $pageRequest);
+}
 
 /*                                              */
 /*  EXTENSIONS LAYER                            */
